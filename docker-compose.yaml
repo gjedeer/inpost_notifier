@@ -1,0 +1,23 @@
+version: "2"
+services:
+  inpost:
+    image: gdr1/inpost_notifier:latest
+    container_name: inpost
+    environment:
+      - TZ=Europe/Warsaw
+      # The SMTP server used for sending. StartTLS is always used.
+      - SMTP_SERVER=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_FROM=president_clinton@gmail.com
+      - SMTP_LOGIN=president_clinton@gmail.com
+      - SMTP_PASSWORD=Monica
+      # The recipient
+      - YOUR_EMAIL=you@tutanota.com
+      # Optional - recipient's PGP key fingerprint
+#      - YOUR_PGP_KEY_ID=11C1B15A5D5DD662E469928AEBDA6B974ED3D2B7
+      # Optional - the PGP server to fetch recipient's key
+#      - PGP_KEYSERVER=keys.gnupg.net
+    volumes:
+      - /data/docker/inpost:/home/inpost/.config/alufers/inpost-cli
+    restart: always
+
