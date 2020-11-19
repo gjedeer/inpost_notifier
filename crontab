@@ -1,0 +1,2 @@
+*/15 * * * * python /notify_inpost.py
+5 7 * * 4    /bin/bash /refresh_keys.sh

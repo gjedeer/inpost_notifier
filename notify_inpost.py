@@ -38,12 +38,13 @@ def send_email(subject, text):
     s.quit()
 
 def get_waiting_parcels():
-    #p = subprocess.run(['inpost-cli', 'ls', '-f', 'json', '-s', 'ready_to_pickup'])
-    p = subprocess.run(['inpost-cli', 'ls', '-f', 'json', '-s', 'ready_to_pickup'], capture_output=True, check=True)
-    json_r = p.stdout.decode('utf8')
-    return json.loads(json_r)
-#    with open('inpost-cli-json.json') as f:
-#        return json.load(f)
+    if os.getenv('TEST_DATA', False):
+        with open('inpost-cli-json.json') as f:
+            return json.load(f)
+    else:
+        p = subprocess.run(['inpost-cli', 'ls', '-f', 'json', '-s', 'ready_to_pickup'], capture_output=True, check=True)
+        json_r = p.stdout.decode('utf8')
+        return json.loads(json_r)
 
 def gpg_get_key(key_id):
     keyserver = os.getenv('PGP_KEYSERVER', 'keys.gnupg.net')
@@ -58,17 +59,60 @@ def gpg_encrypt(key_id, text):
     p = subprocess.run(['gpg', '--recipient', key_id, '-a', '--encrypt', '--batch', '--trust-model', 'always'], input=text.encode('utf-8'), capture_output=True, check=True)
     return p.stdout.decode('utf8')
 
+def get_parcels_state_path():
+    return os.getenv('PARCEL_STATE_PATH', os.path.expanduser('~/.config/alufers/inpost-cli/notifications_sent.txt'))
+
+def new_parcels_present(numbers):
+    numbers_found = set()
+    if not os.path.exists(get_parcels_state_path()):
+        return True
+    with open(get_parcels_state_path()) as f:
+        for line_ in f:
+            line = line_.strip()
+            for number in numbers:
+                if number == line:
+                    numbers_found.add(number)
+            
+    return set(numbers) - numbers_found
+
+def store_notified_parcels(numbers):
+    new_parcels = new_parcels_present(numbers)
+    with open(get_parcels_state_path(), 'a') as f:
+        for number in numbers:
+            f.write(number.strip() + '\n')
+
 def send_emails_for_waiting_parcels():
     msg = ''
     parcels = get_waiting_parcels()
-    for parcel in parcels:
-        msg += "%s (do %s) - od %s - %s %s\n" % (
-            parcel['openCode'],
-            parcel['expiryDate'],
-            parcel['senderName'],
-            parcel['pickupPoint']['addressDetails']['street'],
-            parcel['pickupPoint']['addressDetails']['buildingNumber'],
-        )
+    parcel_numbers = [parcel['shipmentNumber'] for parcel in parcels]
+
+    if not new_parcels_present(parcel_numbers):
+        print("No new parcels present, exiting")
+        return
+
+    pickup_points = set([ (
+        parcel['pickupPoint']['addressDetails']['street'], 
+        parcel['pickupPoint']['addressDetails']['buildingNumber'], 
+        parcel['pickupPoint']['name'],
+        parcel['phoneNumber']
+    ) for parcel in parcels])
+    for pickup_point in pickup_points:
+        msg += "%s %s (%s) tel %s:\n" % pickup_point
+        for parcel in parcels:
+            parcel_pickup = (
+                parcel['pickupPoint']['addressDetails']['street'], 
+                parcel['pickupPoint']['addressDetails']['buildingNumber'], 
+                parcel['pickupPoint']['name'],
+                parcel['phoneNumber']
+            )
+            if parcel_pickup != pickup_point:
+                continue
+            msg += "%s %s (do %s) - od %s\n" % (
+                parcel['openCode'][:3],
+                parcel['openCode'][3:],
+                parcel['expiryDate'],
+                parcel['senderName'],
+            )
 
     if len(parcels) > 0:
         pgp_key_id = os.getenv('YOUR_PGP_KEY_ID', None)
@@ -78,6 +122,7 @@ def send_emails_for_waiting_parcels():
             msg_text = msg
         print("Starting sending email")
         send_email('Paczki do odbioru', msg_text)
+        store_notified_parcels(parcel_numbers)
 
 
 if __name__ == '__main__':
