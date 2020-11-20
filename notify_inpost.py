@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+## TODO proper pgp/inline email sending - k9 does not read the current version https://stackoverflow.com/a/54500371
+
 import json
 import os
 import smtplib
