@@ -12,4 +12,5 @@ COPY refresh_keys.sh /
 COPY crontab /etc/crontabs/inpost
 COPY notify_inpost.py /
 
-CMD /sbin/tini /usr/sbin/crond -f -l 0
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD /usr/sbin/crond -f -l 0
