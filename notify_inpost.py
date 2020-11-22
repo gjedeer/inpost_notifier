@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
-## TODO proper pgp/inline email sending - k9 does not read the current version https://stackoverflow.com/a/54500371
-
 import json
 import os
 import smtplib
 import subprocess
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+
 
 def send_email(subject, text):
     #Establish SMTP Connection
@@ -20,21 +20,15 @@ def send_email(subject, text):
     s.login(os.getenv('SMTP_LOGIN'), os.getenv('SMTP_PASSWORD'))
 
     #To Create Email Message in Proper Format
-    msg = MIMEMultipart()
+    msg = MIMEText(text)
 
     #Setting Email Parameters
     msg['From'] = os.getenv('SMTP_FROM', os.getenv('SMTP_LOGIN'))
     msg['To'] = os.getenv('YOUR_EMAIL')
     msg['Subject'] = subject
 
-    #Email Body Content
-    message = text
-
-    #Add Message To Email Body
-    msg.attach(MIMEText(message, 'text'))
-
     #To Send the Email
-    s.send_message(msg)
+    s.sendmail(msg['From'], [msg['To']], msg.as_string())
 
     #Terminating the SMTP Session
     s.quit()

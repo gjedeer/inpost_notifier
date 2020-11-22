@@ -11,6 +11,7 @@ COPY --from=builder /go/bin/inpost-cli /usr/bin/
 COPY refresh_keys.sh /
 COPY crontab /etc/crontabs/inpost
 COPY notify_inpost.py /
+COPY inpost-cli-json.json /
 
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD /usr/sbin/crond -f -l 0
