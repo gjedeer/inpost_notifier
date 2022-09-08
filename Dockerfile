@@ -1,6 +1,6 @@
 FROM golang:alpine as builder
 
-RUN apk add git && go get -u github.com/alufers/inpost-cli
+RUN apk add git && go install github.com/alufers/inpost-cli@latest
 
 FROM python:3-alpine
 
